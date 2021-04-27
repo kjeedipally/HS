@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en_US">
+<head>
+<meta charset="UTF-8">
+<title>
+    Hosted Session demonstration addressing CCL and HA needs
+</title>
+<!-- <script src="https://qa01.gateway.mastercard.com/form/version/58/merchant/TESTPPRO/session.js?debug=true"></script> -->
+<!-- <script src="https://localhost/form/version/56/merchant/TESTPPRO/session.js?debug=true"></script> -->
+<!-- <script src="https://dl01aspall2bv.qabri.mastercard.int/form/version/52/merchant/TESTPPRO/session.js?debug=true"></script> -->
+<!-- <script src="https://dl01aspall36v.qabri.mastercard.int/form/version/52/merchant/TESTWCAG1/session.js?debug=true"></script> -->
+<script src="https://mtf.gateway.mastercard.com/form/version/58/merchant/SRC_TEST/session.js?debug=true"></script>
+
+<style id="antiClickjack">body{display:none !important;}</style>
+<style>
+.sectiontext {
+  margin:20px;
+}
+.input-field:focus {
+   border-color: #66afe9;
+   outline:0;
+   outline: none !important;
+   box-shadow: none;
+}
+#gift-card-number {
+    margin-left : 50px;
+}
+#gift-card-pin {
+    margin-left : 155px;
+}
+ td { padding:5px; }
+ .input-field { border: 1px solid black;  }
+ .errormsg{
+    display: none;
+ }
+</style>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+</head>
+<body>
+
+<h2 class="sectiontext">Gift Cards</h2>
+<table class="container" style="width:700px;margin-left:20px" >
+    <tr>
+        <td id="giftcardnumberarea">
+            <label>Gift Card Number:
+                <input type="text" id="gift-card-number" class="input-field" onfocus="clearErrorMessage('giftcardError')" value="" readonly>
+            </label>
+            <div  aria-live="assertive">
+                <p id="giftcardError" class="errormsg" ></p>
+            </div>
+        </td>
+    </tr>
+    <tr>
+        <td id="pinarea">
+            <label>Pin:
+                <input type="text" id="gift-card-pin" class="input-field" onfocus="clearErrorMessage('pinError')" value="" readonly>
+            </label>
+            <div  aria-live="assertive">
+                <p id="pinError" class="errormsg"></p>
+            </div>
+        </td>
+    </tr> 
+    <tr>
+        <td>
+            <button id="payButton" onclick="pay();">Pay With Gift Card</button>
+            <div  aria-live="assertive">
+                <p id="paymentSuccess" class="errormsg"></p>
+            </div>
+        </td>
+    </tr>
+</table>
+<script type="text/javascript">
+if (self === top) {
+    var antiClickjack = document.getElementById("antiClickjack");
+    antiClickjack.parentNode.removeChild(antiClickjack);
+} else {
+    top.location = self.location;
+}
+
+PaymentSession.configure({
+    fields: {
+        giftCard: {
+                    number: "#gift-card-number",
+                    pin: "#gift-card-pin"
+                  }
+    },
+    frameEmbeddingMitigation: ["javascript"],
+    locale : "es-MX",
+		callbacks: {
+            initialized: function (response) {},
+		formSessionUpdate: function (response) {
+			if (response.status) {
+				if ("ok" == response.status && finalSubmit == true) {
+                    console.log("Session updated with data: " + response.session.id);                    
+
+                    var giftcardError = document.getElementById("giftcardError");
+                    var pinError = document.getElementById("pinError");
+                    
+                    giftcardError.style.display = "none";
+                    pinError.style.display = "none";
+
+					var parent = document.getElementById("paymentSuccess");
+                    parent.innerHTML = "Payment is "+ response.session.updateStatus;		
+                    parent.style.display = "block";		                  
+                    
+				} else if (response.status == "fields_in_error") {
+
+					var paymentSuccess = document.getElementById("paymentSuccess");
+					if (paymentSuccess != null) {
+                        paymentSuccess.style.display = "none";		
+					}
+
+					var giftcardError = document.getElementById("giftcardError");
+                    var pinError = document.getElementById("pinError");
+                    
+                    if (finalSubmit && response.errors.cardNumber) {
+                        giftcardError.innerHTML = "";
+						giftcardError.innerHTML = "Gift Card number is " + response.errors.cardNumber;
+						giftcardError.style.display = "block";
+					} else if (!response.errors.cardNumber) {
+						giftcardError.style.display = "none";
+					}
+                    if (finalSubmit && response.errors.pin) 
+                    {
+                        pinError.innerHTML = "";
+                    	pinError.innerHTML = "Pin is " + response.errors.pin;
+						pinError.style.display = "block";						
+					} else if (!response.errors.pin) {
+						pinError.style.display = "none";
+                    }
+				}
+			}
+		}
+
+	}
+});
+
+var finalSubmit = number = pin = false;
+
+function pay() {			
+  var parent = document.getElementById("paymentSuccess");
+                    parent.innerHTML = "";
+	finalSubmit = true;
+	number = pin = false
+	PaymentSession.updateSessionFromForm('giftCard');
+}
+
+</script>
+</body>
+</html>
