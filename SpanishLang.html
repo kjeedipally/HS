@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>
+    Demostración de sesión alojada que aborda las necesidades de CCL y HA
+</title>
+<!-- <script src="https://qa01.gateway.mastercard.com/form/version/56/merchant/TESTPPRO/session.js?debug=true"></script> -->
+<!-- <script src="https://localhost/form/version/52/merchant/TESTPPRO/session.js?debug=true"></script> -->
+<!-- <script src="https://dl01aspall36v.qabri.mastercard.int/form/version/52/merchant/TESTWCAG1/session.js?debug=true"></script> -->
+<script src="https://mtf.gateway.mastercard.com/form/version/58/merchant/SRC_TEST/session.js?debug=true"></script>
+
+<style id="antiClickjack">body{display:none !important;}</style>
+<style>
+.input-field:focus {
+   border-color: #66afe9;
+   outline:0;
+   outline: none !important;
+   box-shadow: none;
+}
+#card-holder-name {
+    margin-left : 100px;
+}
+#card-number {
+    margin-left : 97px;
+}
+#expiry-month {
+    margin-left : 40px;
+}
+#expiry-year {
+    margin-left : 50px;
+}
+#security-code {
+    margin-left : 172px;
+}
+td { padding:5px; }
+ .input-field { border: 1px solid black;  }
+ .errormsg{
+    display: none;
+ }
+</style>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+</head>
+<body>
+
+<h1>Por favor introduzca sus datos de pago</h1>
+<table class="container" style="width:700px;margin-left:20px" >
+    <tr>
+        <td id="cardholdernamearea">
+            <label>Nombre del titular de la tarjeta:
+                <input type="text" id="card-holder-name" class="input-field" value="" readonly>
+            </label>
+        </td>
+    </tr>
+    <tr>
+        <td id="cardnumberarea">
+            <label>Número de tarjeta (obligatorio):
+                <input type="text" id="card-number" class="input-field" onfocus="clearErrorMessage('cardError')" value="" readonly>
+            </label>
+            <div  aria-live="assertive">
+                <p id="cardError" class="errormsg" ></p>
+            </div>
+        </td>
+    </tr>
+    <tr>
+        <td id="cardexpiryMontharea">
+            <label>Mes de vencimiento (MM) (obligatorio):
+                <input type="text" id="expiry-month" class="input-field" onfocus="clearErrorMessage('monthError')" value="" readonly>
+            </label>
+            <div  aria-live="assertive">
+                <p id="monthError" class="errormsg"></p>
+            </div>
+        </td>
+    </tr>
+    <tr>
+        <td id="cardexpiryYeararea">
+            <label>Año de vencimiento (AA) (obligatorio):
+                <input type="text" id="expiry-year" class="input-field" onfocus="clearErrorMessage('yearError')" value="" readonly>
+            </label>
+            <div  aria-live="assertive">
+                <p id="yearError" class="errormsg"></p>
+            </div>
+        </td>
+    </tr>
+    <tr>
+        <td id="cardsecurityarea">
+            <label>Código de seguridad:
+                <input type="text" id="security-code" class="input-field" onfocus="clearErrorMessage('cscError')" value="" readonly>
+            </label>
+            <div  aria-live="assertive">
+                <p id="cscError" class="errormsg"></p>
+            </div>
+        </td>
+    </tr> 
+    <tr>
+        <td>
+            <button id="payButton" onclick="pay();">Pay Now</button>
+            <div  aria-live="assertive">
+                <p id="paymentSuccess" class="errormsg"></p>
+            </div>
+        </td>
+    </tr>
+</table>
+<script type="text/javascript">
+if (self === top) {
+    var antiClickjack = document.getElementById("antiClickjack");
+    antiClickjack.parentNode.removeChild(antiClickjack);
+} else {
+    top.location = self.location;
+}
+
+var cardHolderNameField = document.getElementById('card-holder-name');
+
+PaymentSession.configure({
+    fields: {
+        card: {
+          nameOnCard: cardHolderNameField ? "#card-holder-name" : null,
+        	number: "#card-number",
+        	securityCode: "#security-code",
+        	expiryMonth: "#expiry-month",
+        	expiryYear: "#expiry-year"
+        }
+    },
+    frameEmbeddingMitigation: ["javascript"],
+    locale:"es",
+		callbacks: {
+				initialized: function(response) {
+				},
+				formSessionUpdate: function(response) {
+          if (response.status) {
+				if ("ok" == response.status && finalSubmit == true) {
+                    console.log("Session updated with data: " + response.session.id);
+                    
+
+                    var cardError = document.getElementById("cardError");
+                    var monthError = document.getElementById("monthError");
+                    var yearError = document.getElementById("yearError");
+                    var cscError = document.getElementById("cscError");
+
+                    cardError.style.display = "none";
+                    monthError.style.display = "none";
+                    yearError.style.display = "none";
+                    cscError.style.display = "none";
+
+					var parent = document.getElementById("paymentSuccess");
+                    parent.innerHTML = "el pago es "+ response.session.updateStatus;		
+                    parent.style.display = "block";		
+                    
+
+                    
+				} else if (response.status == "fields_in_error") {
+
+
+					var paymentSuccess = document.getElementById("paymentSuccess");
+					if (paymentSuccess != null) {
+                        paymentSuccess.style.display = "none";		
+					}
+
+					var cardError = document.getElementById("cardError");
+                    var monthError = document.getElementById("monthError");
+                    var yearError = document.getElementById("yearError");
+                    var cscError = document.getElementById("cscError");
+                    
+                    if (finalSubmit && response.errors.cardNumber) {
+                        cardError.innerHTML = "";
+						cardError.innerHTML = "el número de tarjeta es " + response.errors.cardNumber;
+						cardError.style.display = "block";
+					} else if (!response.errors.cardNumber) {
+						cardError.style.display = "none";
+					}
+                    if (finalSubmit && response.errors.expiryMonth) 
+                    {
+                        monthError.innerHTML = "";
+                    	monthError.innerHTML = "el mes de vencimiento es " + response.errors.expiryMonth;
+						monthError.style.display = "block";						
+					} else if (!response.errors.expiryMonth) {
+						monthError.style.display = "none";
+                    }
+                    
+					if (finalSubmit && response.errors.expiryYear) {  
+                        yearError.innerHTML = "";                      
+                         yearError.innerHTML = "año de vencimiento es " + response.errors.expiryYear;
+                         yearError.style.display = "block";							   
+					
+					} else if (!response.errors.expiryYear) {
+                        yearError.style.display = "none";		
+					}
+
+
+					if (finalSubmit && response.errors.securityCode) {
+                        cscError.innerHTML = "";
+                        cscError.innerHTML = "el código de seguridad es " + response.errors.securityCode;
+                        cscError.style.display = "block";							
+					} else if (!response.errors.securityCode) {
+						cscError.style.display = "none";	
+					}
+				}
+			}
+		}
+
+	}
+});
+
+
+var finalSubmit = expiryMonth = expiryYear = cardNumber = securityCode = false;
+
+PaymentSession.setFocusStyle(["card.number", "card.securityCode", "card.expiryMonth", "card.expiryYear"], {
+	'border-color': '#66afe9',
+	outline: 0,
+	'box-shadow': '0px 1px 1px rgba(0, 0, 0, 0.075) inset, 0px 0px 8px rgba(255, 100, 255, 0.5)'
+});
+
+function pay() {
+  var parent = document.getElementById("paymentSuccess");
+                    parent.innerHTML = "";
+	finalSubmit = true;
+	expiryMonth = expiryYear = cardNumber = securityCode = false;
+	PaymentSession.updateSessionFromForm('card');
+}
+
+</script>
+</body>
+</html>
